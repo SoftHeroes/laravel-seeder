@@ -23,6 +23,8 @@ return [
     |
     */
 
-    'dir' => 'seeders',
+    'dir' => [
+        database_path('seeders')
+    ],
 
 ];

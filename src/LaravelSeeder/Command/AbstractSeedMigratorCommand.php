@@ -2,8 +2,9 @@
 
 namespace Eighty8\LaravelSeeder\Command;
 
-use Eighty8\LaravelSeeder\Migration\SeederMigratorInterface;
 use Illuminate\Console\Command;
+use Symfony\Component\Finder\Finder;
+use Eighty8\LaravelSeeder\Migration\SeederMigratorInterface;
 
 abstract class AbstractSeedMigratorCommand extends Command
 {
@@ -116,15 +117,21 @@ abstract class AbstractSeedMigratorCommand extends Command
      */
     protected function resolveMigrationPaths(): void
     {
-        $pathFromConfig = database_path(config('seeders.dir'));
+        $pathsFromConfig = config('seeders.dir');
 
-        // Add the 'all' environment path to migration paths
-        $allEnvPath = $pathFromConfig.DIRECTORY_SEPARATOR.self::ALL_ENVIRONMENTS;
-        $this->addMigrationPath($allEnvPath);
+        foreach ($pathsFromConfig as $eachPath) {
 
-        // Add the targeted environment path to migration paths
-        $pathWithEnv = $pathFromConfig.DIRECTORY_SEPARATOR.$this->getEnvironment();
-        $this->addMigrationPath($pathWithEnv);
+            foreach ((new Finder)->in($eachPath) as $path) {
+
+                // Add the 'all' environment path to migration paths
+                $allEnvPath = $path->getPath() . DIRECTORY_SEPARATOR . self::ALL_ENVIRONMENTS;
+                $this->addMigrationPath($allEnvPath);
+
+                // Add the targeted environment path to migration paths
+                $pathWithEnv = $path->getPath() . DIRECTORY_SEPARATOR . $this->getEnvironment();
+                $this->addMigrationPath($pathWithEnv);
+            }
+        }
     }
 
     /**
@@ -135,6 +142,8 @@ abstract class AbstractSeedMigratorCommand extends Command
     public function addMigrationPath(string $path): void
     {
         $this->migrationPaths[] = $path;
+
+        $this->migrationPaths = array_unique($this->migrationPaths);
     }
 
     /**
