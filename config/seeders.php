@@ -27,7 +27,8 @@ return [
     | Default seeders folder
     |--------------------------------------------------------------------------
     |
-    | This option controls the default seeds folder
+    | This option controls the default seeds folder.
+    | We always use 1st path for seed:make command
     |
     */
 

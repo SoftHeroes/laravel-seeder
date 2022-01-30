@@ -91,8 +91,16 @@ class SeedMake extends MigrateMakeCommand
     {
         $targetPath = $this->input->getOption('path');
 
+        $seeder_paths = config('seeders.dir');
+
+        $first_seeder_path = '';
+
+        if(count($seeder_paths)){
+            $first_seeder_path = $seeder_paths[0];
+        }
+
         $path = (empty($targetPath))
-            ? database_path(config('seeders.dir'))
+            ? database_path($first_seeder_path)
             : $this->laravel->basePath().DIRECTORY_SEPARATOR.$targetPath;
 
         return $path.DIRECTORY_SEPARATOR.$env;
