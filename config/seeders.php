@@ -33,7 +33,7 @@ return [
     */
 
     'dir' => [
-        database_path('seeders')
+        app_path('*/*/Data/Seeders')
     ],
 
     'commands' => [

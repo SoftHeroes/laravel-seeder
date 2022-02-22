@@ -1,5 +1,5 @@
 {
-  "name": "softheroes/laravel-seeder",
+  "name": "kirankumar/laravel-seeder",
   "description": "Versioned, environment-based Seeders in Laravel. Used while original does not update to Laravel 5.7",
   "keywords": [
     "data",
