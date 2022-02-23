@@ -85,7 +85,7 @@ abstract class AbstractSeedMigratorCommand extends Command
      */
     protected function resolveEnvironment(): void
     {
-        $env = $this->input->getOption('env') ?: $this->getLaravel()->environment();
+        $env = $this->input->getOption('env') ?: config('seeders.env');
 
         $this->setEnvironment($env);
 
