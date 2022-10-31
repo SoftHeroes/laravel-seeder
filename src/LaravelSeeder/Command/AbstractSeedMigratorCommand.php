@@ -26,6 +26,7 @@ abstract class AbstractSeedMigratorCommand extends Command
     /** @var array
      * Array that stores all files for $env
      */
+
     protected $files = [];
     /**
      * Constructor.
