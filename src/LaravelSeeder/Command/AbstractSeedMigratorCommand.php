@@ -23,6 +23,10 @@ abstract class AbstractSeedMigratorCommand extends Command
     /** @var array */
     protected $migrationPaths = [];
 
+    /** @var array
+     * Array that stores all files for $env
+     */
+    protected $files = [];
     /**
      * Constructor.
      *
@@ -142,7 +146,13 @@ abstract class AbstractSeedMigratorCommand extends Command
     public function addMigrationPath(string $path): void
     {
         $this->migrationPaths[] = $path;
-
+    }
+    /**
+     * Uniquely sort migration paths.
+     *  array $migrationPaths
+     */
+    public function uniqueMigrationPaths(): void
+    {
         $this->migrationPaths = array_unique($this->migrationPaths);
     }
 
