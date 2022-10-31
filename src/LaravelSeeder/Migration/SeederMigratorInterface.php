@@ -103,7 +103,6 @@ interface SeederMigratorInterface
      * @return string
      */
     public function getMigrationName($path);
-
     /**
      * Get all of the migration files in a given path.
      *
@@ -112,4 +111,42 @@ interface SeederMigratorInterface
      * @return array
      */
     public function getMigrationFiles($paths);
+    /**
+     * Run a migration inside a transaction if the database supports it.
+     *
+     * @param  object  $migration
+     * @param  string  $method
+     * @return void
+     */
+    public function runMigration($migration, $method);
+
+    /**
+     * Resolve a migration instance from a migration path.
+     *
+     * @param  string  $path
+     * @return object
+     */
+    public function resolvePath(string $path);
+
+    /**
+     * Run "up" a migration instance.
+     *
+     * @param  string  $file
+     * @param  int  $batch
+     * @param  bool  $pretend
+     * @return void
+     */
+    public function runNewUp($file, $batch, $pretend);
+
+    /**
+     * Run "down" a migration instance.
+     *
+     * @param  string  $file
+     * @param  int  $migration
+     * @param  bool  $pretend
+     * @return void
+     */
+    public function runNewDown($file, $migration, $pretend);
+
+    public function newReset();
 }
