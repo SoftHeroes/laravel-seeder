@@ -159,7 +159,6 @@ class SeederMigrator extends Migrator implements SeederMigratorInterface
         // Since the getRan method that retrieves the migration name just gives us the
         // migration name, we will format the names into objects with the name as a
         // property on the objects so that we can pass it to the rollback method.
-        //$resolvedMigrations = $this->resolvePath();
         $migrations = collect($migrations)->map(function ($m) {
             return (object) ['seed' => $m];
         })->all();
@@ -189,7 +188,6 @@ class SeederMigrator extends Migrator implements SeederMigratorInterface
         // repository already returns these migration's names in reverse order.
         $rolledBack = $this->repository->getRan(); // TODO: populate the list in the foreach loop, figure out how to get the full file name
         foreach ($migrations as $migration) {
-            // $rolledBack[] = $files[$migration->seed];
             $this->runMigration($migration, 'down');
         }
         return $rolledBack;
