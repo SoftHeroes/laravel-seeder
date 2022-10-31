@@ -4,9 +4,16 @@ namespace Eighty8\LaravelSeeder\Migration;
 
 use Eighty8\LaravelSeeder\Repository\SeederRepositoryInterface;
 use Illuminate\Database\ConnectionResolverInterface;
+use Illuminate\Database\Events\MigrationEnded;
+use Illuminate\Database\Events\MigrationStarted;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use phpDocumentor\Reflection\Types\ClassString;
+use phpDocumentor\Reflection\Types\Object_;
+use ReflectionClass;
 
 class SeederMigrator extends Migrator implements SeederMigratorInterface
 {
@@ -57,7 +64,9 @@ class SeederMigrator extends Migrator implements SeederMigratorInterface
         ConnectionResolverInterface $resolver,
         Filesystem $files
     ) {
-        parent::__construct($repository, $resolver, $files);
+        $this->repository = $repository;
+        $this->resolver = $resolver;
+        $this->files = $files;
     }
 
     /**
@@ -150,6 +159,7 @@ class SeederMigrator extends Migrator implements SeederMigratorInterface
         // Since the getRan method that retrieves the migration name just gives us the
         // migration name, we will format the names into objects with the name as a
         // property on the objects so that we can pass it to the rollback method.
+        //$resolvedMigrations = $this->resolvePath();
         $migrations = collect($migrations)->map(function ($m) {
             return (object) ['seed' => $m];
         })->all();
@@ -177,17 +187,11 @@ class SeederMigrator extends Migrator implements SeederMigratorInterface
         // Next we will run through all of the migrations and call the "down" method
         // which will reverse each migration in order. This getLast method on the
         // repository already returns these migration's names in reverse order.
+        $rolledBack = $this->repository->getRan(); // TODO: populate the list in the foreach loop, figure out how to get the full file name
         foreach ($migrations as $migration) {
-            $migration = (object) $migration;
-
-            $rolledBack[] = $files[$migration->seed];
-
-            $this->runDown(
-                $files[$migration->seed],
-                $migration, Arr::get($options, 'pretend', false)
-            );
+            // $rolledBack[] = $files[$migration->seed];
+            $this->runMigration($migration, 'down');
         }
-
         return $rolledBack;
     }
 
@@ -229,15 +233,163 @@ class SeederMigrator extends Migrator implements SeederMigratorInterface
     }
 
     /**
-     * Write a note to the console's output.
+     * Resolve a migration instance from a migration path.
      *
-     * @param  string  $message
+     * @param  string  $path
+     * @return object
+     */
+    public function resolvePath(string $path)
+    {
+        $test = $this->getMigrationName($path);
+        $className = $this->getMigrationClass($test);
+        $class = $this->getMigrationClass($this->getMigrationName($path));
+
+        if (class_exists($class) && realpath($path) == (new ReflectionClass($class))->getFileName()) {
+            return new $class;
+        }
+
+        $migration = $this->files->getRequire($path);
+
+        return is_object($migration) ? $migration : new $class;
+    }
+
+    /**
+     * Get the name of the migration.
+     *
+     * @param  string  $path
+     * @return string
+     */
+    public function getMigrationName($path)
+    {
+        return str_replace('.php', '', basename($path));
+    }
+    /**
+     * Run a migration inside a transaction if the database supports it.
+     *
+     * @param  object  $migration
+     * @param  string  $method
      * @return void
      */
-    protected function note($message)
+    public function runMigration($migration, $method)
     {
-        if ($this->output) {
-            $this->output->writeln($message);
-        }
+        $connection = $this->resolveConnection(
+            $migration->getConnection()
+        );
+
+        $callback = function () use ($connection, $migration, $method) {
+            if (method_exists($migration, $method)) {
+                $this->fireMigrationEvent(new MigrationStarted($migration, $method));
+
+                $this->runMethod($connection, $migration, $method);
+
+                $this->fireMigrationEvent(new MigrationEnded($migration, $method));
+            }
+        };
+
+        $this->getSchemaGrammar($connection)->supportsSchemaTransactions()
+        && $migration->withinTransaction
+            ? $connection->transaction($callback)
+            : $callback();
     }
+
+    /**
+     * Run "up" a migration instance.
+     *
+     * @param  string  $file
+     * @param  int  $batch
+     * @param  bool  $pretend
+     * @return void
+     */
+    public function runNewUp($file, $batch, $pretend)
+    {
+        // First we will resolve a "real" instance of the migration class from this
+        // migration file name. Once we have the instances we can run the actual
+        // command such as "up" or "down", or we can just simulate the action.
+        $migration = $this->resolvePath($file);
+
+        $name = $this->getMigrationName($file);
+
+        if ($pretend) {
+            return $this->pretendToRun($migration, 'run');
+        }
+
+        $this->note("<comment>Seeding:</comment> {$name}");
+
+        $startTime = microtime(true);
+
+        $this->runMigration($migration, 'run');
+
+        $runTime = number_format((microtime(true) - $startTime) * 1000, 2);
+
+        // Once we have run a migrations class, we will log that it was run in this
+        // repository so that we don't try to run it next time we do a migration
+        // in the application. A migration repository keeps the migrate order.
+        $this->repository->log($name, $batch);
+
+        $this->note("<info>Seeded:</info>  {$name} ({$runTime}ms)");
+    }
+
+    public function runNewDown($file, $batch, $pretend){
+        // First we will resolve a "real" instance of the migration class from this
+        // migration file name. Once we have the instances we can run the actual
+        // command such as "up" or "down", or we can just simulate the action.
+        $migration = $this->resolvePath($file);
+
+        $name = $this->getMigrationName($file);
+
+        if ($pretend) {
+            return $this->pretendToRun($migration, 'down');
+        }
+
+        $this->note("<comment>Rolling Back:</comment> {$name}");
+
+        $startTime = microtime(true);
+
+        $this->runMigration($migration, 'down');
+
+        $runTime = number_format((microtime(true) - $startTime) * 1000, 2);
+
+        // Once we have run a migrations class, we will log that it was run in this
+        // repository so that we don't try to run it next time we do a migration
+        // in the application. A migration repository keeps the migrate order.
+        $migration_for_rollback = $this->repository->getCurrent($name);
+
+        $this->repository->delete($migration_for_rollback[0]);
+
+        $this->note("<info>Seeded:</info>  {$name} ({$runTime}ms)");
+    }
+    /**
+     * Rolls all of the currently applied migrations back.
+     *
+     * @param  array|string  $paths
+     * @param  bool  $pretend
+     * @return array
+     */
+    public function reset($paths = [], $pretend = false)
+    {
+        // Next, we will reverse the migration list so we can run them back in the
+        // correct order for resetting this database. This will allow us to get
+        // the database back into its "empty" state ready for the migrations.
+        $migrations = array_reverse($this->repository->getRan());
+        foreach($this->files as $migration){
+            $migr_objects[]=$this->resolvePath($migration);
+        }
+        $dummy='test';
+        if (count($migrations) === 0) {
+            $this->note('<info>Nothing to rollback.</info>');
+
+            return [];
+        }
+
+        return $this->resetMigrations($migrations, $paths, $pretend);
+    }
+    public function newReset($files=[]){
+        foreach($files as $file){
+            $migration_objects[] = $this->resolvePath($file);
+        }
+
+        $this->rollbackMigrations($migration_objects, [],[]);
+    }
+
 }
+
