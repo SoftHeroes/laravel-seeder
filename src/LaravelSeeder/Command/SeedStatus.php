@@ -48,6 +48,7 @@ class SeedStatus extends AbstractSeedMigratorCommand
      */
     protected function getStatusFor(array $ran)
     {
+        $test = $this->getAllMigrationFiles();
         return Collection::make($this->getAllMigrationFiles())
             ->map(function ($migration) use ($ran) {
                 $migrationName = $this->migrator->getMigrationName($migration);

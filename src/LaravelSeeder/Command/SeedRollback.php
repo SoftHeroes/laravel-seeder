@@ -34,6 +34,10 @@ class SeedRollback extends AbstractSeedMigratorCommand
 
         // Prepare the migrator.
         $this->prepareMigrator();
+        foreach($this->files as $path) {
+            $this->migrator->runNewDown($path, 0, false);
+        }
+
 
         // Rolls back the migrator.
         $this->info('Rolling back seeded data for '.ucfirst($this->getEnvironment()).' environment...');
