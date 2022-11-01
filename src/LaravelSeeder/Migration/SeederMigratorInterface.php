@@ -149,4 +149,12 @@ interface SeederMigratorInterface
     public function runNewDown($file, $migration, $pretend);
 
     public function newReset();
+
+    /**
+     * Write a note to the console's output.
+     *
+     * @param  string  $message
+     * @return void
+     */
+    public function note($message);
 }

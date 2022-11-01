@@ -389,5 +389,17 @@ class SeederMigrator extends Migrator implements SeederMigratorInterface
         $this->rollbackMigrations($migration_objects, [],[]);
     }
 
+    /**
+     * Write a note to the console's output.
+     *
+     * @param  string  $message
+     * @return void
+     */
+    public function note($message)
+    {
+        if ($this->output) {
+            $this->output->writeln($message);
+        }
+    }
 }
 
