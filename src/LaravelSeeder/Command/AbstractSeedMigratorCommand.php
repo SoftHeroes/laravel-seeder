@@ -2,6 +2,8 @@
 
 namespace Eighty8\LaravelSeeder\Command;
 
+use Dotenv\Loader\Resolver;
+use Eighty8\LaravelSeeder\Migration\SeederMigrator;
 use Illuminate\Console\Command;
 use Symfony\Component\Finder\Finder;
 use Eighty8\LaravelSeeder\Migration\SeederMigratorInterface;
@@ -26,7 +28,6 @@ abstract class AbstractSeedMigratorCommand extends Command
     /** @var array
      * Array that stores all files for $env
      */
-
     protected $files = [];
     /**
      * Constructor.
@@ -126,16 +127,21 @@ abstract class AbstractSeedMigratorCommand extends Command
 
         foreach ($pathsFromConfig as $eachPath) {
 
-            foreach ((new Finder)->in($eachPath) as $path) {
+            foreach ((new Finder)->in($eachPath.DIRECTORY_SEPARATOR.$this->getEnvironment()) as $path) {
 
-                // Add the 'all' environment path to migration paths
+                /*// Add the 'all' environment path to migration paths
                 $allEnvPath = $path->getPath() . DIRECTORY_SEPARATOR . self::ALL_ENVIRONMENTS;
                 $this->addMigrationPath($allEnvPath);
+                */
 
                 // Add the targeted environment path to migration paths
-                $pathWithEnv = $path->getPath() . DIRECTORY_SEPARATOR . $this->getEnvironment();
+                //Scratch that,
+                //Get all files from defined env into an array and store it under this
+                $this->files[] = $path;
+                $pathWithEnv = $path->getPath();
                 $this->addMigrationPath($pathWithEnv);
             }
+            $this->uniqueMigrationPaths();
         }
     }
 
@@ -147,11 +153,9 @@ abstract class AbstractSeedMigratorCommand extends Command
     public function addMigrationPath(string $path): void
     {
         $this->migrationPaths[] = $path;
+
+//        $this->migrationPaths = array_unique($this->migrationPaths);
     }
-    /**
-     * Uniquely sort migration paths.
-     *  array $migrationPaths
-     */
     public function uniqueMigrationPaths(): void
     {
         $this->migrationPaths = array_unique($this->migrationPaths);
@@ -224,4 +228,6 @@ abstract class AbstractSeedMigratorCommand extends Command
     {
         $this->migrationOptions = $migrationOptions;
     }
+
+
 }

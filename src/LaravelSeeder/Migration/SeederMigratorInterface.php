@@ -3,6 +3,8 @@
 namespace Eighty8\LaravelSeeder\Migration;
 
 use Eighty8\LaravelSeeder\Repository\SeederRepositoryInterface;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 interface SeederMigratorInterface
 {
@@ -49,7 +51,7 @@ interface SeederMigratorInterface
      * Rolls all of the currently applied migrations back.
      *
      * @param array|string $paths
-     * @param bool         $pretend
+     * @param bool $pretend
      *
      * @return array
      */
@@ -59,7 +61,7 @@ interface SeederMigratorInterface
      * Rollback the last migration operation.
      *
      * @param array|string $paths
-     * @param array        $options
+     * @param array $options
      *
      * @return array
      */
@@ -103,6 +105,7 @@ interface SeederMigratorInterface
      * @return string
      */
     public function getMigrationName($path);
+
     /**
      * Get all of the migration files in a given path.
      *
@@ -111,11 +114,12 @@ interface SeederMigratorInterface
      * @return array
      */
     public function getMigrationFiles($paths);
+
     /**
      * Run a migration inside a transaction if the database supports it.
      *
-     * @param  object  $migration
-     * @param  string  $method
+     * @param object $migration
+     * @param string $method
      * @return void
      */
     public function runMigration($migration, $method);
@@ -123,38 +127,10 @@ interface SeederMigratorInterface
     /**
      * Resolve a migration instance from a migration path.
      *
-     * @param  string  $path
+     * @param string $path
      * @return object
      */
     public function resolvePath(string $path);
 
-    /**
-     * Run "up" a migration instance.
-     *
-     * @param  string  $file
-     * @param  int  $batch
-     * @param  bool  $pretend
-     * @return void
-     */
-    public function runNewUp($file, $batch, $pretend);
 
-    /**
-     * Run "down" a migration instance.
-     *
-     * @param  string  $file
-     * @param  int  $migration
-     * @param  bool  $pretend
-     * @return void
-     */
-    public function runNewDown($file, $migration, $pretend);
-
-    public function newReset();
-
-    /**
-     * Write a note to the console's output.
-     *
-     * @param  string  $message
-     * @return void
-     */
-    public function note($message);
 }
