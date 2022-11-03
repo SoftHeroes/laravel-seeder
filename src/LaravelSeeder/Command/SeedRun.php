@@ -36,12 +36,22 @@ class SeedRun extends AbstractSeedMigratorCommand
         $this->prepareMigrator();
 
         // Execute the migrator.
-        $this->info('Seeding data for '.ucfirst($this->getEnvironment()).' environment...');
-        foreach ($this->files as $path) {
-            $this->migrator->runNewUp($path, 0, false);
+        $pretend =  $this->input->getOption('pretend');
+        if(!$pretend){
+            $this->info('Seeding data for '.ucfirst($this->getEnvironment()).' environment...');
+            $pretend = false;
+            foreach($this->files as $path) {
+                $this->migrator->runUp($path, 0, $pretend);
+            }
+            $this->info('Seeded data for '.ucfirst($this->getEnvironment()).' environment');
+        }else {
+            $this->info('Pretending to be seeding seeding data for '.ucfirst($this->getEnvironment()).' environment...');
+            $pretend = true;
+            foreach($this->files as $path) {
+                $this->migrator->runUp($path, 0, $pretend);
+            }
+            $this->info('Pretended to be seeding data for '.ucfirst($this->getEnvironment()).' environment.');
         }
-
-        $this->info('Seeded data for '.ucfirst($this->getEnvironment()).' environment');
     }
 
     /**
