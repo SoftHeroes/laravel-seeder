@@ -128,6 +128,19 @@ class SeederRepository implements SeederRepositoryInterface
     }
 
     /**
+     * Get the current migration batch.
+     *
+     * @return array
+     */
+    public function getCurrent($name): array
+    {
+        return $this->table()
+            ->where('seed', '=', $name)
+            ->get()
+            ->toArray();
+    }
+
+    /**
      * Get the last migration batch number.
      *
      * @return int
@@ -246,13 +259,13 @@ class SeederRepository implements SeederRepositoryInterface
                 ->orderBy('migration', 'asc')
                 ->pluck('batch', 'migration')->all();
     }
-    
+
     /**
      * Delete the migration repository data store.
      *
      * @return void
      */
     public function deleteRepository() {
-        //   
+        //
     }
 }

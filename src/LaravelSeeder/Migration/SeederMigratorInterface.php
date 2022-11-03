@@ -3,6 +3,8 @@
 namespace Eighty8\LaravelSeeder\Migration;
 
 use Eighty8\LaravelSeeder\Repository\SeederRepositoryInterface;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 interface SeederMigratorInterface
 {
@@ -49,7 +51,7 @@ interface SeederMigratorInterface
      * Rolls all of the currently applied migrations back.
      *
      * @param array|string $paths
-     * @param bool         $pretend
+     * @param bool $pretend
      *
      * @return array
      */
@@ -59,7 +61,7 @@ interface SeederMigratorInterface
      * Rollback the last migration operation.
      *
      * @param array|string $paths
-     * @param array        $options
+     * @param array $options
      *
      * @return array
      */
@@ -112,4 +114,23 @@ interface SeederMigratorInterface
      * @return array
      */
     public function getMigrationFiles($paths);
+
+    /**
+     * Run a migration inside a transaction if the database supports it.
+     *
+     * @param object $migration
+     * @param string $method
+     * @return void
+     */
+    public function runMigration($migration, $method);
+
+    /**
+     * Resolve a migration instance from a migration path.
+     *
+     * @param string $path
+     * @return object
+     */
+    public function resolvePath(string $path);
+
+
 }

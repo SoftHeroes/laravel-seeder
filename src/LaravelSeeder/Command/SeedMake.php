@@ -60,7 +60,6 @@ class SeedMake extends MigrateMakeCommand
     protected function writeMigration($model, $table, $created)
     {
         $env = $this->resolveEnvironment();
-
         $migration = $this->creator->create($model, $this->getOutputPath($env));
 
         $file = pathinfo($migration, PATHINFO_FILENAME);
@@ -105,6 +104,7 @@ class SeedMake extends MigrateMakeCommand
 
         return $path.DIRECTORY_SEPARATOR.$env;
     }
+
 
     /**
      * Get the console command arguments.
