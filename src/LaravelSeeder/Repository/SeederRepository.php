@@ -268,4 +268,18 @@ class SeederRepository implements SeederRepositoryInterface
     public function deleteRepository() {
         //
     }
+
+    /**
+     * Get the list of the migrations by batch number.
+     *
+     * @param  int  $batchNumber
+     * @return array
+     */
+    public function getMigrationsByBatch($batch)
+    {
+        return $this->table()
+            ->where('batch', $batch)
+            ->get()
+            ->all();
+    }
 }
