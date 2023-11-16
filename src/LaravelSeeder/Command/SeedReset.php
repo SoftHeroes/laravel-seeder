@@ -36,19 +36,10 @@ class SeedReset extends AbstractSeedMigratorCommand
         $this->prepareMigrator();
 
         // Reset the migrator.
+        $this->info('Removing seeded data for '.ucfirst($this->getEnvironment()).' environment...');
+        $this->migrator->reset($this->getMigrationPaths(), $this->getMigrationOptions());
 
-        $pretend = $this->input->getOption('pretend');
-        if (!$pretend) {
-            $this->info('Removing seeded data for ' . ucfirst($this->getEnvironment()) . ' environment...');
-            $pretend = false;
-            $this->migrator->reset($this->files, $pretend);
-            $this->info('Removed seeded data for ' . ucfirst($this->getEnvironment()) . ' environment');
-        } else {
-            $this->info('Pretending to remove seeded data for ' . ucfirst($this->getEnvironment()) . ' environment...');
-            $this->migrator->reset($this->files, $pretend);
-            $this->info('Pretended to remove seeded data for ' . ucfirst($this->getEnvironment()) . ' environment');
-        }
-
+        $this->info('Removed seeded data for '.ucfirst($this->getEnvironment()).' environment');
     }
 
     /**
