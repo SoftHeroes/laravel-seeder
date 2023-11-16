@@ -2,8 +2,6 @@
 
 namespace Eighty8\LaravelSeeder\Command;
 
-use Dotenv\Loader\Resolver;
-use Eighty8\LaravelSeeder\Migration\SeederMigrator;
 use Illuminate\Console\Command;
 use Symfony\Component\Finder\Finder;
 use Eighty8\LaravelSeeder\Migration\SeederMigratorInterface;
@@ -25,10 +23,6 @@ abstract class AbstractSeedMigratorCommand extends Command
     /** @var array */
     protected $migrationPaths = [];
 
-    /** @var array
-     * Array that stores all files for $env
-     */
-    protected $files = [];
     /**
      * Constructor.
      *
@@ -127,21 +121,16 @@ abstract class AbstractSeedMigratorCommand extends Command
 
         foreach ($pathsFromConfig as $eachPath) {
 
-            foreach ((new Finder)->in($eachPath.DIRECTORY_SEPARATOR.$this->getEnvironment()) as $path) {
+            foreach ((new Finder)->in($eachPath) as $path) {
 
-                /*// Add the 'all' environment path to migration paths
+                // Add the 'all' environment path to migration paths
                 $allEnvPath = $path->getPath() . DIRECTORY_SEPARATOR . self::ALL_ENVIRONMENTS;
                 $this->addMigrationPath($allEnvPath);
-                */
 
                 // Add the targeted environment path to migration paths
-                //Scratch that,
-                //Get all files from defined env into an array and store it under this
-                $this->files[] = $path;
-                $pathWithEnv = $path->getPath();
+                $pathWithEnv = $path->getPath() . DIRECTORY_SEPARATOR . $this->getEnvironment();
                 $this->addMigrationPath($pathWithEnv);
             }
-            $this->uniqueMigrationPaths();
         }
     }
 
@@ -154,10 +143,6 @@ abstract class AbstractSeedMigratorCommand extends Command
     {
         $this->migrationPaths[] = $path;
 
-//        $this->migrationPaths = array_unique($this->migrationPaths);
-    }
-    public function uniqueMigrationPaths(): void
-    {
         $this->migrationPaths = array_unique($this->migrationPaths);
     }
 
@@ -228,6 +213,4 @@ abstract class AbstractSeedMigratorCommand extends Command
     {
         $this->migrationOptions = $migrationOptions;
     }
-
-
 }

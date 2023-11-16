@@ -26,7 +26,4 @@ interface SeederRepositoryInterface extends MigrationRepositoryInterface
      * @return bool
      */
     public function hasEnvironment(): bool;
-
-    public function getCurrent($name): array;
-
 }
