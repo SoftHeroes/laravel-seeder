@@ -53,13 +53,21 @@ class SeederRepository implements SeederRepositoryInterface
      */
     public function __construct(ConnectionResolverInterface $resolver, string $table, string $database_name = null)
     {
-        if(!empty($database_name)){
-            $resolver->connection()->setDatabaseName($database_name);
-            $resolver->connection()->statement("use $database_name");
-        }
-        
         $this->connectionResolver = $resolver;
         $this->table = $table;
+
+        if (!empty($this->database_name)) {
+            $this->setDatabaseName($this->database_name);
+        }
+    }
+
+    public function setDatabaseName(string $database_name)
+    {
+        $this->database_name = $database_name;
+        if (!empty($this->database_name)) {
+            $this->connectionResolver->connection()->setDatabaseName($this->database_name);
+            $this->connectionResolver->connection()->statement("use $this->database_name");
+        }
     }
 
     /**
@@ -93,7 +101,7 @@ class SeederRepository implements SeederRepositoryInterface
     public function getConnection(): Connection
     {
         $connection = $this->connectionResolver->connection($this->connection);
-        if(!empty($this->database_name)){
+        if (!empty($this->database_name)) {
             $connection->setDatabaseName($this->database_name);
             $connection->statement("use $this->database_name");
         }
@@ -170,8 +178,8 @@ class SeederRepository implements SeederRepositoryInterface
     public function log($file, $batch): void
     {
         $this->table()->insert([
-            'seed'  => $file,
-            'env'   => $this->getEnvironment(),
+            'seed' => $file,
+            'env' => $this->getEnvironment(),
             'batch' => $batch,
         ]);
     }
@@ -253,7 +261,7 @@ class SeederRepository implements SeederRepositoryInterface
     {
         return $this->table()->get()->toArray();
     }
-    
+
     /**
      * Get the completed migrations with their batch numbers.
      *
@@ -262,17 +270,18 @@ class SeederRepository implements SeederRepositoryInterface
     public function getMigrationBatches()
     {
         return $this->table()
-                ->orderBy('batch', 'asc')
-                ->orderBy('migration', 'asc')
-                ->pluck('batch', 'migration')->all();
+            ->orderBy('batch', 'asc')
+            ->orderBy('migration', 'asc')
+            ->pluck('batch', 'migration')->all();
     }
-    
+
     /**
      * Delete the migration repository data store.
      *
      * @return void
      */
-    public function deleteRepository() {
+    public function deleteRepository()
+    {
         //   
     }
 
