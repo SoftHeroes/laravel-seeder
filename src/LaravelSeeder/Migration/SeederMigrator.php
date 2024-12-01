@@ -1,121 +1,63 @@
 <?php
 
-namespace Eighty8\LaravelSeeder\Repository;
+namespace Eighty8\LaravelSeeder\Migration;
 
-use Illuminate\Database\Connection;
+use Eighty8\LaravelSeeder\Repository\SeederRepositoryInterface;
 use Illuminate\Database\ConnectionResolverInterface;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migrator;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Arr;
 
-class SeederRepository implements SeederRepositoryInterface
+class SeederMigrator extends Migrator implements SeederMigratorInterface
 {
     /**
-     * The name of the environment to run in.
+     * The migration repository implementation.
      *
-     * @var string
+     * @var SeederRepositoryInterface
      */
-    public $environment;
+    protected $repository;
 
     /**
-     * The database connection resolver instance.
+     * The filesystem instance.
+     *
+     * @var Filesystem
+     */
+    protected $files;
+
+    /**
+     * The connection resolver instance.
      *
      * @var ConnectionResolverInterface
      */
-    protected $connectionResolver;
+    protected $resolver;
 
     /**
-     * The name of the migration table.
-     *
-     * @var string
-     */
-    protected $table;
-
-    /**
-     * The name of the database connection to use.
+     * The name of the default connection.
      *
      * @var string
      */
     protected $connection;
 
-
     /**
-     * The name of the database name to use.
+     * The paths to all of the migration files.
      *
-     * @var string
+     * @var array
      */
-    public $database_name = null;
+    protected $paths = [];
 
     /**
-     * Create a new database migration repository instance.
+     * Create a new migrator instance.
      *
+     * @param SeederRepositoryInterface   $repository
      * @param ConnectionResolverInterface $resolver
-     * @param string                      $table
+     * @param Filesystem                  $files
      */
-    public function __construct(ConnectionResolverInterface $resolver, string $table, string $database_name = null)
-    {
-        $this->connectionResolver = $resolver;
-        $this->table = $table;
-
-        if (!empty($this->database_name)) {
-            $this->setDatabaseName($this->database_name);
-        }
-    }
-
-    public function setDatabaseName(string $database_name)
-    {
-        $this->database_name = $database_name;
-        if (!empty($this->database_name)) {
-            $this->connectionResolver->connection()->setDatabaseName($this->database_name);
-            $this->connectionResolver->connection()->statement("use $this->database_name");
-        }
-    }
-
-    /**
-     * Get the ran migrations.
-     *
-     * @return array
-     */
-    public function getRan(): array
-    {
-        return $this->table()
-            ->whereIn('env', [$this->getEnvironment(), 'all'])
-            ->pluck('seed')
-            ->toArray();
-    }
-
-    /**
-     * Get a query builder for the migration table.
-     *
-     * @return Builder
-     */
-    protected function table(): Builder
-    {
-        return $this->getConnection()->table($this->table);
-    }
-
-    /**
-     * Resolve the database connection instance.
-     *
-     * @return Connection
-     */
-    public function getConnection(): Connection
-    {
-        $connection = $this->connectionResolver->connection($this->connection);
-        if (!empty($this->database_name)) {
-            $connection->setDatabaseName($this->database_name);
-            $connection->statement("use $this->database_name");
-        }
-        return $connection;
-    }
-
-    /**
-     * Determines whether an environment has been set.
-     *
-     * @return bool
-     */
-    public function hasEnvironment(): bool
-    {
-        return !empty($this->getEnvironment());
+    public function __construct(
+        SeederRepositoryInterface $repository,
+        ConnectionResolverInterface $resolver,
+        Filesystem $files
+    ) {
+        parent::__construct($repository, $resolver, $files);
     }
 
     /**
@@ -125,7 +67,17 @@ class SeederRepository implements SeederRepositoryInterface
      */
     public function getEnvironment(): ?string
     {
-        return $this->environment;
+        return $this->repository->getEnvironment();
+    }
+
+    /**
+     * Determines whether an environment has been set.
+     *
+     * @return bool
+     */
+    public function hasEnvironment(): bool
+    {
+        return $this->repository->hasEnvironment();
     }
 
     /**
@@ -135,167 +87,157 @@ class SeederRepository implements SeederRepositoryInterface
      */
     public function setEnvironment(string $env): void
     {
-        $this->environment = $env;
+        $this->repository->setEnvironment($env);
     }
 
     /**
-     * Get the last migration batch.
-     *
-     * @return array
-     */
-    public function getLast(): array
-    {
-        return $this->table()
-            ->whereIn('env', [$this->getEnvironment(), 'all'])
-            ->where('batch', $this->getLastBatchNumber())
-            ->orderBy('seed', 'desc')
-            ->get()
-            ->toArray();
-    }
-
-    /**
-     * Get the last migration batch number.
-     *
-     * @return int
-     */
-    protected function getLastBatchNumber(): int
-    {
-        $max = $this->table()
-            ->whereIn('env', [$this->getEnvironment(), 'all'])
-            ->max('batch');
-
-        return ($max) ?: 0;
-    }
-
-    /**
-     * Log that a migration was run.
+     * Run "up" a seeder instance.
      *
      * @param string $file
      * @param int    $batch
-     *
-     * @return void
+     * @param bool   $pretend
      */
-    public function log($file, $batch): void
+    protected function runUp($file, $batch, $pretend): void
     {
-        $this->table()->insert([
-            'seed' => $file,
-            'env' => $this->getEnvironment(),
-            'batch' => $batch,
-        ]);
+        // First we will resolve a "real" instance of the seeder class from this
+        // seeder file name. Once we have the instances we can run the actual
+        // command such as "up" or "down", or we can just simulate the action.
+        $seeder = $this->resolve(
+            $name = $this->getMigrationName($file)
+        );
+
+        $this->note("<comment>Seeding:</comment> {$name}");
+
+        if ($pretend) {
+            $this->pretendToRun($seeder, 'run');
+
+            return;
+        }
+
+        $seeder->run();
+
+        // Once we have run a migrations class, we will log that it was run in this
+        // repository so that we don't try to run it next time we do a seeder
+        // in the application. A seeder repository keeps the migrate order.
+        $this->repository->log($name, $batch);
+
+        $this->note("<info>Seeded:</info> $name");
     }
 
     /**
-     * Remove a migration from the log.
+     * Resolve a migration instance from a file.
      *
-     * @param $seeder
+     * @param string $file
+     *
+     * @return MigratableSeeder
      */
-    public function delete($seeder): void
+    public function resolve($file): MigratableSeeder
     {
-        $this->table()
-            ->whereIn('env', [$this->getEnvironment(), 'all'])
-            ->where('seed', $seeder->seed)
-            ->delete();
+        return parent::resolve($file);
     }
 
     /**
-     * Get the next migration batch number.
+     * Reset the given migrations.
      *
-     * @return int
-     */
-    public function getNextBatchNumber(): int
-    {
-        return $this->getLastBatchNumber() + 1;
-    }
-
-    /**
-     * Create the migration repository data store.
-     *
-     * @return void
-     */
-    public function createRepository(): void
-    {
-        $connection = $this->getConnection();
-
-        $schema = $connection->getSchemaBuilder();
-
-        $schema->create($this->table, function (Blueprint $table) {
-            // The migrations table is responsible for keeping track of which of the
-            // migrations have actually run for the application. We'll create the
-            // table to hold the migration file's path as well as the batch ID.
-            $table->string('seed');
-            $table->string('env');
-            $table->integer('batch');
-        });
-    }
-
-    /**
-     * Determine if the migration repository exists.
-     *
-     * @return bool
-     */
-    public function repositoryExists(): bool
-    {
-        $schema = $this->getConnection()->getSchemaBuilder();
-
-        return $schema->hasTable($this->table);
-    }
-
-    /**
-     * Set the information source to gather data.
-     *
-     * @param string $name
-     */
-    public function setSource($name): void
-    {
-        $this->connection = $name;
-    }
-
-    /**
-     * Get list of migrations.
-     *
-     * @param int $steps
+     * @param array $migrations
+     * @param array $paths
+     * @param bool  $pretend
      *
      * @return array
      */
-    public function getMigrations($steps): array
+    protected function resetMigrations(array $migrations, array $paths, $pretend = false)
     {
-        return $this->table()->get()->toArray();
+        // Since the getRan method that retrieves the migration name just gives us the
+        // migration name, we will format the names into objects with the name as a
+        // property on the objects so that we can pass it to the rollback method.
+        $migrations = collect($migrations)->map(function ($m) {
+            return (object) ['seed' => $m];
+        })->all();
+
+        return $this->rollbackMigrations(
+            $migrations, $paths, compact('pretend')
+        );
     }
 
     /**
-     * Get the completed migrations with their batch numbers.
+     * Rollback the given migrations.
+     *
+     * @param array        $migrations
+     * @param array|string $paths
+     * @param array        $options
      *
      * @return array
      */
-    public function getMigrationBatches()
+    protected function rollbackMigrations(array $migrations, $paths, array $options)
     {
-        return $this->table()
-            ->orderBy('batch', 'asc')
-            ->orderBy('migration', 'asc')
-            ->pluck('batch', 'migration')->all();
+        $rolledBack = [];
+
+        $this->requireFiles($files = $this->getMigrationFiles($paths));
+
+        // Next we will run through all of the migrations and call the "down" method
+        // which will reverse each migration in order. This getLast method on the
+        // repository already returns these migration's names in reverse order.
+        foreach ($migrations as $migration) {
+            $migration = (object) $migration;
+
+            $rolledBack[] = $files[$migration->seed];
+
+            $this->runDown(
+                $files[$migration->seed],
+                $migration, Arr::get($options, 'pretend', false)
+            );
+        }
+
+        return $rolledBack;
     }
 
     /**
-     * Delete the migration repository data store.
+     * Run "down" a seeder instance.
+     *
+     * @param string $file
+     * @param object $migration
+     * @param bool   $pretend
      *
      * @return void
      */
-    public function deleteRepository()
+    protected function runDown($file, $migration, $pretend): void
     {
-        //   
+        // First we will get the file name of the seeder so we can resolve out an
+        // instance of the seeder. Once we get an instance we can either run a
+        // pretend execution of the seeder or we can run the real seeder.
+        $seeder = $this->resolve(
+            $name = $this->getMigrationName($file)
+        );
+
+        $this->note("<comment>Rolling back:</comment> {$name}");
+
+        if ($pretend) {
+            $this->pretendToRun($seeder, 'down');
+
+            return;
+        }
+
+        // Run "down" the seeder
+        $seeder->down();
+
+        // Once we have successfully run the seeder "down" we will remove it from
+        // the migration repository so it will be considered to have not been run
+        // by the application then will be able to fire by any later operation.
+        $this->repository->delete($migration);
+
+        $this->note("<info>Rolled back:</info>  {$name}");
     }
 
     /**
-     * Get the list of the migrations by batch number.
+     * Write a note to the console's output.
      *
-     * @param  int  $batchNumber
-     * @return array
+     * @param  string  $message
+     * @return void
      */
-    public function getMigrationsByBatch($batch)
+    protected function note($message)
     {
-        return $this->table()
-            ->where('batch', $batch)
-            ->get()
-            ->all();
+        if ($this->output) {
+            $this->output->writeln($message);
+        }
     }
 }
