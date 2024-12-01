@@ -37,14 +37,27 @@ class SeederRepository implements SeederRepositoryInterface
      */
     protected $connection;
 
+
+    /**
+     * The name of the database name to use.
+     *
+     * @var string
+     */
+    public $database_name = null;
+
     /**
      * Create a new database migration repository instance.
      *
      * @param ConnectionResolverInterface $resolver
      * @param string                      $table
      */
-    public function __construct(ConnectionResolverInterface $resolver, string $table)
+    public function __construct(ConnectionResolverInterface $resolver, string $table, string $database_name = null)
     {
+        if(!empty($database_name)){
+            $resolver->connection()->setDatabaseName($database_name);
+            $resolver->connection()->statement("use $database_name");
+        }
+        
         $this->connectionResolver = $resolver;
         $this->table = $table;
     }
@@ -79,7 +92,12 @@ class SeederRepository implements SeederRepositoryInterface
      */
     public function getConnection(): Connection
     {
-        return $this->connectionResolver->connection($this->connection);
+        $connection = $this->connectionResolver->connection($this->connection);
+        if(!empty($this->database_name)){
+            $connection->setDatabaseName($this->database_name);
+            $connection->statement("use $this->database_name");
+        }
+        return $connection;
     }
 
     /**
@@ -188,7 +206,9 @@ class SeederRepository implements SeederRepositoryInterface
      */
     public function createRepository(): void
     {
-        $schema = $this->getConnection()->getSchemaBuilder();
+        $connection = $this->getConnection();
+
+        $schema = $connection->getSchemaBuilder();
 
         $schema->create($this->table, function (Blueprint $table) {
             // The migrations table is responsible for keeping track of which of the

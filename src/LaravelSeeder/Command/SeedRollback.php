@@ -52,6 +52,7 @@ class SeedRollback extends AbstractSeedMigratorCommand
         return [
             ['env', null, InputOption::VALUE_OPTIONAL, 'The environment to use for the seeders.'],
             ['database', null, InputOption::VALUE_OPTIONAL, 'The database connection to use.'],
+            ['database-name', null, InputOption::VALUE_OPTIONAL, 'The database name to use.'],
             ['force', null, InputOption::VALUE_NONE, 'Force the operation to run when in production.'],
             ['pretend', null, InputOption::VALUE_NONE, 'Dump the SQL queries that would be run.'],
         ];

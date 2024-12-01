@@ -38,12 +38,17 @@ abstract class AbstractSeedMigratorCommand extends Command
     /**
      * Prepares the migrator for usage.
      */
-    protected function prepareMigrator(): void
+    protected function prepareMigrator(array $dir = []): void
     {
         $this->connectToRepository();
         $this->resolveEnvironment();
-        $this->resolveMigrationPaths();
+        $this->resolveMigrationPaths($dir);
         $this->resolveMigrationOptions();
+
+        // Ensure output is set on the migrator
+        if (method_exists($this->migrator, 'setOutput')) {
+            $this->migrator->setOutput($this->getOutput());
+        }
     }
 
     /**
@@ -52,11 +57,15 @@ abstract class AbstractSeedMigratorCommand extends Command
     protected function connectToRepository(): void
     {
         $database = $this->input->getOption('database');
+        $database_name = $this->input->getOption('database-name');
 
         $this->getMigrator()->setConnection($database);
 
         if (!$this->getMigrator()->repositoryExists()) {
-            $this->call('seed:install', ['--database' => $database]);
+            $this->call('seed:install', [
+                '--database' => $database,
+                '--database-name' => $database_name
+            ]);
         }
     }
 
@@ -115,9 +124,9 @@ abstract class AbstractSeedMigratorCommand extends Command
     /**
      * Resolves the paths for the migration files to run the migrator against.
      */
-    protected function resolveMigrationPaths(): void
+    protected function resolveMigrationPaths(array $dir = []): void
     {
-        $pathsFromConfig = config('seeders.dir');
+        $pathsFromConfig = count($dir) > 0 ? $dir : config('seeders.dir');
 
         foreach ($pathsFromConfig as $eachPath) {
 

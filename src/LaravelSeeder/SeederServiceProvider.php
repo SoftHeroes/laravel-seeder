@@ -10,6 +10,7 @@ use Eighty8\LaravelSeeder\Command\SeedReset;
 use Eighty8\LaravelSeeder\Command\SeedStatus;
 use Eighty8\LaravelSeeder\Command\SeedInstall;
 use Eighty8\LaravelSeeder\Command\SeedRefresh;
+use Symfony\Component\Console\Input\ArgvInput;
 use Eighty8\LaravelSeeder\Command\SeedRollback;
 use Eighty8\LaravelSeeder\Migration\SeederMigrator;
 use Eighty8\LaravelSeeder\Repository\SeederRepository;
@@ -62,7 +63,13 @@ class SeederServiceProvider extends ServiceProvider
     private function registerRepository(): void
     {
         $this->app->singleton(SeederRepository::class, function ($app) {
-            return new SeederRepository($app['db'], config('seeders.table'));
+            // Get CLI input
+            $input = new ArgvInput();
+            if ($input->hasParameterOption("--database-name")) {
+                return new SeederRepository($app['db'], config('seeders.table'), $input->getParameterOption("--database-name"));
+            } else {
+                return new SeederRepository($app['db'], config('seeders.table'));
+            }
         });
 
         $this->app->bind(SeederRepositoryInterface::class, function ($app) {
@@ -161,14 +168,16 @@ class SeederServiceProvider extends ServiceProvider
      */
     public function provides(): array
     {
-        $providers = \array_merge($this->commands,
-        [
-            SeederRepository::class,
-            SeederRepositoryInterface::class,
-            SeederMigrator::class,
-            SeederMigratorInterface::class,
-            SeederMigrationCreator::class,
-        ]);
+        $providers = \array_merge(
+            $this->commands,
+            [
+                SeederRepository::class,
+                SeederRepositoryInterface::class,
+                SeederMigrator::class,
+                SeederMigratorInterface::class,
+                SeederMigrationCreator::class,
+            ]
+        );
 
         return $providers;
     }

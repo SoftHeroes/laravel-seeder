@@ -78,6 +78,7 @@ class SeedStatus extends AbstractSeedMigratorCommand
         return [
             ['env', null, InputOption::VALUE_OPTIONAL, 'The environment to use for the seeders.'],
             ['database', null, InputOption::VALUE_OPTIONAL, 'The database connection to use.'],
+            ['database-name', null, InputOption::VALUE_OPTIONAL, 'The database name to use.'],
             ['path', null, InputOption::VALUE_OPTIONAL, 'The path of seeder files to use.'],
         ];
     }

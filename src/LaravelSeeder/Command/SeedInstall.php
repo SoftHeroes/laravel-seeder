@@ -62,7 +62,8 @@ class SeedInstall extends Command
     protected function getOptions(): array
     {
         return [
-            ['database', null, InputOption::VALUE_OPTIONAL, 'The database connection to use.'],
+            ['database', null, InputOption::VALUE_OPTIONAL, 'The database connection to use.', null],
+            ['database-name', null, InputOption::VALUE_OPTIONAL, 'The database name to use.', null],
         ];
     }
 }
