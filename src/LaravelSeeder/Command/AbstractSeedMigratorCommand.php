@@ -59,6 +59,9 @@ abstract class AbstractSeedMigratorCommand extends Command
         $database = $this->input->getOption('database');
         $database_name = $this->input->getOption('database-name');
 
+         if(!empty($database_name)){
+            $this->getMigrator()->getRepository()->setDatabaseName($database_name);
+        }
         $this->getMigrator()->setConnection($database);
 
         if (!$this->getMigrator()->repositoryExists()) {
