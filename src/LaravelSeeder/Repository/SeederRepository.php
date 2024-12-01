@@ -78,7 +78,7 @@ class SeederRepository implements SeederRepositoryInterface
     public function getRan(): array
     {
         return $this->table()
-            ->where('env', '=', $this->getEnvironment())
+            ->whereIn('env', [$this->getEnvironment(), 'all'])
             ->pluck('seed')
             ->toArray();
     }
@@ -146,7 +146,7 @@ class SeederRepository implements SeederRepositoryInterface
     public function getLast(): array
     {
         return $this->table()
-            ->where('env', '=', $this->getEnvironment())
+            ->whereIn('env', [$this->getEnvironment(), 'all'])
             ->where('batch', $this->getLastBatchNumber())
             ->orderBy('seed', 'desc')
             ->get()
@@ -161,7 +161,7 @@ class SeederRepository implements SeederRepositoryInterface
     protected function getLastBatchNumber(): int
     {
         $max = $this->table()
-            ->where('env', '=', $this->getEnvironment())
+            ->whereIn('env', [$this->getEnvironment(), 'all'])
             ->max('batch');
 
         return ($max) ?: 0;
@@ -192,7 +192,7 @@ class SeederRepository implements SeederRepositoryInterface
     public function delete($seeder): void
     {
         $this->table()
-            ->where('env', '=', $this->getEnvironment())
+            ->whereIn('env', [$this->getEnvironment(), 'all'])
             ->where('seed', $seeder->seed)
             ->delete();
     }
