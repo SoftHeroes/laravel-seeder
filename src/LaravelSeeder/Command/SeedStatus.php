@@ -4,6 +4,8 @@ namespace Eighty8\LaravelSeeder\Command;
 
 use Illuminate\Support\Collection;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\InputArgument;
+
 
 class SeedStatus extends AbstractSeedMigratorCommand
 {
@@ -33,7 +35,7 @@ class SeedStatus extends AbstractSeedMigratorCommand
         $this->resolveEnvironment();
 
         // Resolve the migration paths.
-        $this->resolveMigrationPaths();
+        $this->resolveMigrationPaths($this->argument('paths'));
 
         // Print the status of the seeders.
         $this->printStatus();
@@ -80,6 +82,18 @@ class SeedStatus extends AbstractSeedMigratorCommand
             ['database', null, InputOption::VALUE_OPTIONAL, 'The database connection to use.'],
             ['database-name', null, InputOption::VALUE_OPTIONAL, 'The database name to use.'],
             ['path', null, InputOption::VALUE_OPTIONAL, 'The path of seeder files to use.'],
+        ];
+    }
+
+    /**
+     * Get the console command arguments.
+     *
+     * @return array
+     */
+    protected function getArguments(): array
+    {
+        return [
+            ['paths', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'The paths to the seeders.', null],
         ];
     }
 
