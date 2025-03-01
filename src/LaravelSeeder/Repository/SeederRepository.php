@@ -6,6 +6,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\ConnectionResolverInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 
 class SeederRepository implements SeederRepositoryInterface
 {
@@ -54,6 +56,7 @@ class SeederRepository implements SeederRepositoryInterface
     public function __construct(ConnectionResolverInterface $resolver, string $table, string $database_name = null)
     {
         $this->connectionResolver = $resolver;
+        $this->database_name = $database_name;
         $this->table = $table;
 
         if (!empty($this->database_name)) {
@@ -61,13 +64,27 @@ class SeederRepository implements SeederRepositoryInterface
         }
     }
 
-    public function setDatabaseName(string $database_name)
+    /**
+     * Set the database name and reconnect to the database
+     *
+     * @param string $databaseName The new database name to connect to
+     */
+    public function setDatabaseName(string $databaseName)
     {
-        $this->database_name = $database_name;
-        if (!empty($this->database_name)) {
-            $this->connectionResolver->connection()->setDatabaseName($this->database_name);
-            $this->connectionResolver->connection()->statement("use $this->database_name");
-        }
+        // Get the connection name
+        $connectionName = $this->connectionResolver->getDefaultConnection();
+        
+        // Disconnect the current connection
+        $this->connectionResolver->Connection()->disconnect();
+        
+        // Update the database configuration
+        Config::set("database.connections.$connectionName.database", $databaseName);
+        
+        // Purge the existing connection from the connection manager
+        DB::purge($connectionName);
+        
+        // Reconnect and store the new connection
+        $this->connection = DB::reconnect($connectionName);
     }
 
     /**
@@ -90,7 +107,11 @@ class SeederRepository implements SeederRepositoryInterface
      */
     protected function table(): Builder
     {
-        return $this->getConnection()->table($this->table);
+        $connection = $this->getConnection();
+        $connection->disconnect();
+        $connection->reconnect();
+
+        return $connection->table($this->table);
     }
 
     /**
@@ -103,7 +124,8 @@ class SeederRepository implements SeederRepositoryInterface
         $connection = $this->connectionResolver->connection($this->connection);
         if (!empty($this->database_name)) {
             $connection->setDatabaseName($this->database_name);
-            $connection->statement("use $this->database_name");
+            $connection->disconnect();
+            $connection->reconnect();
         }
         return $connection;
     }
